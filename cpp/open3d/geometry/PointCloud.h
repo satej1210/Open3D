@@ -70,7 +70,8 @@ public:
     Eigen::Vector3d GetMaxBound() const override;
     Eigen::Vector3d GetCenter() const override;
     AxisAlignedBoundingBox GetAxisAlignedBoundingBox() const override;
-    OrientedBoundingBox GetOrientedBoundingBox() const override;
+    OrientedBoundingBox GetOrientedBoundingBox(
+            bool robust = false) const override;
     PointCloud &Transform(const Eigen::Matrix4d &transformation) override;
     PointCloud &Translate(const Eigen::Vector3d &translation,
                           bool relative = true) override;
@@ -180,6 +181,17 @@ public:
     /// \param sampling_ratio Sampling ratio, the ratio of sample to total
     /// number of points in the pointcloud.
     std::shared_ptr<PointCloud> RandomDownSample(double sampling_ratio) const;
+
+    /// \brief Function to downsample input pointcloud into output pointcloud
+    /// with a set of points has farthest distance.
+    ///
+    /// The sample is performed by selecting the farthest point from previous
+    /// selected points iteratively.
+    ///
+    /// \param num_samples Number of points to be sampled.
+    std::shared_ptr<PointCloud> FarthestPointDownSample(
+            size_t num_samples) const;
+
     /// \brief Function to crop pointcloud into output pointcloud
     ///
     /// All points with coordinates outside the bounding box \p bbox are
@@ -299,8 +311,13 @@ public:
     std::vector<double> ComputeNearestNeighborDistance() const;
 
     /// Function that computes the convex hull of the point cloud using qhull
+    /// \param joggle_inputs If true allows the algorithm to add random noise
+    ///        to the points to work around degenerate inputs. This adds the
+    ///        'QJ' option to the qhull command.
+    /// \returns The triangle mesh of the convex hull and the list of point
+    ///          indices that are part of the convex hull.
     std::tuple<std::shared_ptr<TriangleMesh>, std::vector<size_t>>
-    ComputeConvexHull() const;
+    ComputeConvexHull(bool joggle_inputs = false) const;
 
     /// \brief This is an implementation of the Hidden Point Removal operator
     /// described in Katz et. al. 'Direct Visibility of Point Sets', 2007.
@@ -336,7 +353,8 @@ public:
     /// model, and still be considered an inlier.
     /// \param ransac_n Number of initial points to be considered inliers in
     /// each iteration.
-    /// \param num_iterations Number of iterations.
+    /// \param num_iterations Maximum number of iterations.
+    /// \param probability Expected probability of finding the optimal plane.
     /// \param seed Sets the seed value used in the random
     /// generator, set to nullopt to use a random seed value with each function
     /// call.
@@ -346,6 +364,7 @@ public:
             const double distance_threshold = 0.01,
             const int ransac_n = 3,
             const int num_iterations = 100,
+            const double probability = 0.99999999,
             utility::optional<int> seed = utility::nullopt) const;
 
     /// \brief Factory function to create a pointcloud from a depth image and a

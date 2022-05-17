@@ -74,7 +74,8 @@ public:
     virtual Eigen::Vector3d GetMaxBound() const override;
     virtual Eigen::Vector3d GetCenter() const override;
     virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox() const override;
-    virtual OrientedBoundingBox GetOrientedBoundingBox() const override;
+    virtual OrientedBoundingBox GetOrientedBoundingBox(
+            bool robust) const override;
     virtual OrientedBoundingBox& Transform(
             const Eigen::Matrix4d& transformation) override;
     virtual OrientedBoundingBox& Translate(const Eigen::Vector3d& translation,
@@ -125,8 +126,12 @@ public:
     /// bounding box that could be computed for example with O'Rourke's
     /// algorithm (cf. http://cs.smith.edu/~jorourke/Papers/MinVolBox.pdf,
     /// https://www.geometrictools.com/Documentation/MinimumVolumeBox.pdf)
+    /// \param points The input points
+    /// \param robust If set to true uses a more robust method which works
+    ///               in degenerate cases but introduces noise to the points
+    ///               coordinates.
     static OrientedBoundingBox CreateFromPoints(
-            const std::vector<Eigen::Vector3d>& points);
+            const std::vector<Eigen::Vector3d>& points, bool robust = false);
 
 public:
     /// The center point of the bounding box.
@@ -144,7 +149,7 @@ public:
 ///
 /// \brief A bounding box that is aligned along the coordinate axes.
 ///
-///  The AxisAlignedBoundingBox uses the cooridnate axes for bounding box
+///  The AxisAlignedBoundingBox uses the coordinate axes for bounding box
 ///  generation. This means that the bounding box is oriented along the
 ///  coordinate axes.
 class AxisAlignedBoundingBox : public Geometry3D {
@@ -176,13 +181,14 @@ public:
     virtual Eigen::Vector3d GetMaxBound() const override;
     virtual Eigen::Vector3d GetCenter() const override;
     virtual AxisAlignedBoundingBox GetAxisAlignedBoundingBox() const override;
-    virtual OrientedBoundingBox GetOrientedBoundingBox() const override;
+    virtual OrientedBoundingBox GetOrientedBoundingBox(
+            bool robust = false) const override;
     virtual AxisAlignedBoundingBox& Transform(
             const Eigen::Matrix4d& transformation) override;
     virtual AxisAlignedBoundingBox& Translate(
             const Eigen::Vector3d& translation, bool relative = true) override;
 
-    /// \brief Scales the axis-aligned bounding boxs.
+    /// \brief Scales the axis-aligned bounding boxes.
     /// If \f$mi\f$ is the min_bound and \f$ma\f$ is the max_bound of
     /// the axis aligned bounding box, and \f$s\f$ and \f$c\f$ are the
     /// provided scaling factor and center respectively, then the new

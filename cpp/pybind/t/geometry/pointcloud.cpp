@@ -59,10 +59,10 @@ static const std::unordered_map<std::string, std::string>
                  "normals are requested, the depth map is first filtered to "
                  "ensure smooth normals."},
                 {"max_nn",
-                 "NeighbourSearch max neighbours parameter [default = 30]."},
+                 "Neighbor search max neighbors parameter [default = 30]."},
                 {"radius",
-                 "[optional] NeighbourSearch radius parameter to use "
-                 "HybridSearch. [Recommended ~1.4x voxel size]."}};
+                 "neighbors search radius parameter to use HybridSearch. "
+                 "[Recommended ~1.4x voxel size]."}};
 
 void pybind_pointcloud(py::module& m) {
     py::class_<PointCloud, PyGeometry<PointCloud>, std::shared_ptr<PointCloud>,
@@ -98,10 +98,10 @@ The attributes of the point cloud have different levels::
     # "normals", some internal operations that expects "normals" will not work.
     # "normals" and "colors" must have shape (N, 3) and must be on the same
     # device as the point cloud.
-    pcd.point["normals"] = o3c.core.Tensor([[0, 0, 1],
+    pcd.point["normals"] = o3d.core.Tensor([[0, 0, 1],
                                             [0, 1, 0],
                                             [1, 0, 0]], dtype, device)
-    pcd.point["normals"] = o3c.core.Tensor([[0.0, 0.0, 0.0],
+    pcd.point["colors"] = o3d.core.Tensor([[0.0, 0.0, 0.0],
                                             [0.1, 0.1, 0.1],
                                             [0.2, 0.2, 0.2]], dtype, device)
 
@@ -109,8 +109,8 @@ The attributes of the point cloud have different levels::
     # You can also attach custom attributes. The value tensor must be on the
     # same device as the point cloud. The are no restrictions on the shape and
     # dtype, e.g.,
-    pcd.point["intensities"] = o3c.core.Tensor([0.3, 0.1, 0.4], dtype, device)
-    pcd.point["lables"] = o3c.core.Tensor([3, 1, 4], o3d.core.int32, device)
+    pcd.point["intensities"] = o3d.core.Tensor([0.3, 0.1, 0.4], dtype, device)
+    pcd.point["labels"] = o3d.core.Tensor([3, 1, 4], o3d.core.int32, device)
 )");
 
     // Constructors.
@@ -181,6 +181,10 @@ The attributes of the point cloud have different levels::
     pointcloud.def("rotate", &PointCloud::Rotate, "R"_a, "center"_a,
                    "Rotate points and normals (if exist).");
 
+    pointcloud.def("select_points", &PointCloud::SelectPoints, "boolean_mask"_a,
+                   "invert"_a = false,
+                   "Select points from input pointcloud, based on boolean mask "
+                   "indices into output point cloud.");
     pointcloud.def(
             "voxel_down_sample",
             [](const PointCloud& pointcloud, const double voxel_size) {
@@ -189,6 +193,10 @@ The attributes of the point cloud have different levels::
             },
             "Downsamples a point cloud with a specified voxel size.",
             "voxel_size"_a);
+    pointcloud.def("remove_radius_outliers", &PointCloud::RemoveRadiusOutliers,
+                   "nb_points"_a, "search_radius"_a,
+                   "Remove points that have less than nb_points neighbors in a "
+                   "sphere of a given search radius.");
 
     pointcloud.def("estimate_normals", &PointCloud::EstimateNormals,
                    py::call_guard<py::gil_scoped_release>(),
@@ -235,6 +243,18 @@ The attributes of the point cloud have different levels::
             "from_legacy", &PointCloud::FromLegacy, "pcd_legacy"_a,
             "dtype"_a = core::Float32, "device"_a = core::Device("CPU:0"),
             "Create a PointCloud from a legacy Open3D PointCloud.");
+    pointcloud.def("project_to_depth_image", &PointCloud::ProjectToDepthImage,
+                   "width"_a, "height"_a, "intrinsics"_a,
+                   "extrinsics"_a = core::Tensor::Eye(4, core::Float32,
+                                                      core::Device("CPU:0")),
+                   "depth_scale"_a = 1000.0, "depth_max"_a = 3.0,
+                   "Project a point cloud to a depth image.");
+    pointcloud.def("project_to_rgbd_image", &PointCloud::ProjectToRGBDImage,
+                   "width"_a, "height"_a, "intrinsics"_a,
+                   "extrinsics"_a = core::Tensor::Eye(4, core::Float32,
+                                                      core::Device("CPU:0")),
+                   "depth_scale"_a = 1000.0, "depth_max"_a = 3.0,
+                   "Project a colored point cloud to a RGBD image.");
     pointcloud.def("to_legacy", &PointCloud::ToLegacy,
                    "Convert to a legacy Open3D PointCloud.");
 
@@ -244,6 +264,8 @@ The attributes of the point cloud have different levels::
                                     map_shared_argument_docstrings);
     docstring::ClassMethodDocInject(m, "PointCloud", "create_from_rgbd_image",
                                     map_shared_argument_docstrings);
+    docstring::ClassMethodDocInject(m, "PointCloud", "select_points");
+    docstring::ClassMethodDocInject(m, "PointCloud", "remove_radius_outliers");
 }
 
 }  // namespace geometry

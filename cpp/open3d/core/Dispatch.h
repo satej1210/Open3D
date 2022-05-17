@@ -29,7 +29,7 @@
 #include "open3d/core/Dtype.h"
 #include "open3d/utility/Logging.h"
 
-/// Call a numerical templated function based on Dtype. Warp the function to
+/// Call a numerical templated function based on Dtype. Wrap the function to
 /// a lambda function to use DISPATCH_DTYPE_TO_TEMPLATE.
 ///
 /// Before:
@@ -104,4 +104,31 @@
         } else {                                         \
             utility::LogError("Unsupported data type."); \
         }                                                \
+    }()
+
+#define DISPATCH_FLOAT_INT_DTYPE_TO_TEMPLATE(FDTYPE, IDTYPE, ...) \
+    [&] {                                                         \
+        if (FDTYPE == open3d::core::Float32 &&                    \
+            IDTYPE == open3d::core::Int32) {                      \
+            using scalar_t = float;                               \
+            using int_t = int32_t;                                \
+            return __VA_ARGS__();                                 \
+        } else if (FDTYPE == open3d::core::Float32 &&             \
+                   IDTYPE == open3d::core::Int64) {               \
+            using scalar_t = float;                               \
+            using int_t = int64_t;                                \
+            return __VA_ARGS__();                                 \
+        } else if (FDTYPE == open3d::core::Float64 &&             \
+                   IDTYPE == open3d::core::Int32) {               \
+            using scalar_t = double;                              \
+            using int_t = int32_t;                                \
+            return __VA_ARGS__();                                 \
+        } else if (FDTYPE == open3d::core::Float64 &&             \
+                   IDTYPE == open3d::core::Int64) {               \
+            using scalar_t = double;                              \
+            using int_t = int64_t;                                \
+            return __VA_ARGS__();                                 \
+        } else {                                                  \
+            utility::LogError("Unsupported data type.");          \
+        }                                                         \
     }()

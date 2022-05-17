@@ -38,8 +38,10 @@ from tensorboard.compat.tensorflow_stub.pywrap_tensorflow import masked_crc32c
 
 import open3d as o3d
 from open3d.visualization import rendering
-from open3d.ml.vis import Colormap
-from open3d.ml.vis import LabelLUT
+# TODO(@ssheorey) Colormap and LabelLUT are duplicated from Open3D-ML. Remove
+# duplicates when 3DML is available on Windows.
+from .colormap import Colormap
+from .labellut import LabelLUT
 from . import plugin_data_pb2
 from . import metadata
 
@@ -63,7 +65,7 @@ class ReadWriteLock:
     """A lock object that allows many simultaneous "read locks", but
     only one "write lock."
 
-    Implmentation from Python Cookbook (O'Reilly)
+    Implementation from Python Cookbook (O'Reilly)
     https://www.oreilly.com/library/view/python-cookbook/0596001673/ch06s04.html
     Credit: Sami Hangaslammi
     """

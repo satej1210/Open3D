@@ -106,6 +106,20 @@ TEST_P(TensorPermuteDevices, WithInitValue) {
     std::vector<float> vals{0, 1, 2, 3, 4, 5};
     core::Tensor t(vals, {2, 3}, core::Float32, device);
     EXPECT_EQ(t.ToFlatVector<float>(), vals);
+
+    // Wrapper
+    {
+        core::Tensor wrapper(t.GetDataPtr(), t.GetDtype(), t.GetShape(), {},
+                             t.GetDevice());
+        EXPECT_EQ(t.GetStrides(), wrapper.GetStrides());
+        EXPECT_EQ(wrapper.ToFlatVector<float>(), vals);
+        // Updating original data updates wrapper.
+        t[1][1] = 0;
+        vals[4] = 0;
+        EXPECT_EQ(wrapper.ToFlatVector<float>(), vals);
+    }
+    // Original data is present after wrapper is destructed.
+    EXPECT_EQ(t.ToFlatVector<float>(), vals);
 }
 
 TEST_P(TensorPermuteDevices, WithInitList) {
@@ -1800,7 +1814,7 @@ TEST_P(TensorPermuteDevices, ReduceSumSpecialShapes) {
     EXPECT_THROW(dst.Sum({1}, false), std::runtime_error);
     EXPECT_THROW(dst.Sum({1}, true), std::runtime_error);
 
-    // Emtpy reduction axis ().
+    // Empty reduction axis ().
     // This reduces no axis, which is different from reduce all axis.
     // np.sum(np.ones((0)), axis=(), keepdims=*)
     src = core::Tensor::Ones({0}, core::Float32, device);

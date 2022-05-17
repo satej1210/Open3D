@@ -28,8 +28,11 @@
 
 import os
 import sys
-sys.path.append("../utility")
-from file import check_folder_structure, extract_rgbd_frames
+
+pyexample_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(pyexample_path)
+
+from open3d_example import extract_rgbd_frames
 
 
 def set_default_value(config, key, value):
@@ -56,7 +59,7 @@ def initialize_config(config):
     set_default_value(config, "python_multi_threading", True)
 
     # `slac` and `slac_integrate` related parameters.
-    # `voxel_size` and `min_depth` paramters from previous section,
+    # `voxel_size` and `min_depth` parameters from previous section,
     # are also used in `slac` and `slac_integrate`.
     set_default_value(config, "max_iterations", 5)
     set_default_value(config, "sdf_trunc", 0.04)

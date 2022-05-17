@@ -142,7 +142,7 @@ void pybind_visualizer(py::module &m) {
                PyVisualizer<VisualizerWithKeyCallback>,
                std::shared_ptr<VisualizerWithKeyCallback>>
             visualizer_key(m, "VisualizerWithKeyCallback", visualizer,
-                           "Visualizer with custom key callack capabilities.");
+                           "Visualizer with custom key callback capabilities.");
     py::detail::bind_default_constructor<VisualizerWithKeyCallback>(
             visualizer_key);
     visualizer_key
@@ -203,6 +203,12 @@ void pybind_visualizer(py::module &m) {
             .def("clear_picked_points",
                  &VisualizerWithVertexSelection::ClearPickedPoints,
                  "Function to clear picked points")
+            .def("add_picked_points",
+                 &VisualizerWithVertexSelection::AddPickedPoints,
+                 "Function to add picked points")
+            .def("remove_picked_points",
+                 &VisualizerWithVertexSelection::RemovePickedPoints,
+                 "Function to remove picked points")
             .def("register_selection_changed_callback",
                  &VisualizerWithVertexSelection::
                          RegisterSelectionChangedCallback,

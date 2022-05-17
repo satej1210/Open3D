@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -120,6 +121,39 @@ public:
           data_ptr_(data_ptr),
           dtype_(dtype),
           blob_(blob) {}
+
+    /// \brief Tensor wrapper constructor from raw host buffer.
+    ///
+    /// This creates a Tensor wrapper for externally managed memory. It is the
+    /// user's responsibility to keep the buffer valid during the lifetime of
+    /// this Tensor and deallocate it afterwards.
+    ///
+    /// \param data_ptr Pointer to externally managed buffer.
+    /// \param dtype Tensor element data type. e.g. `Float32` for single
+    /// precision float.
+    /// \param shape List of dimensions of data in buffer. e.g. `{640, 480, 3}`
+    /// for a 640x480 RGB image.
+    /// \param strides Number of elements to advance to reach the next element,
+    /// for every dimension. This will be calculated from the shape assuming a
+    /// contiguous buffer if not specified. For the above `Float32` image, the
+    /// value of an element will be read as:
+    ///
+    ///     image[row, col, ch] = *(float *) (data_ptr + sizeof(float) *
+    ///     (row * stride[0] + col * stride[1] + ch * stride[2]));
+    ///
+    /// \param device Device containing the data buffer.
+    Tensor(void* data_ptr,
+           Dtype dtype,
+           const SizeVector& shape,
+           const SizeVector& strides = {},
+           const Device& device = Device("CPU:0"))
+        : shape_(shape), strides_(strides), data_ptr_(data_ptr), dtype_(dtype) {
+        if (strides_.empty()) {
+            strides_ = shape_util::DefaultStrides(shape);
+        }
+        // Blob with no-op deleter.
+        blob_ = std::make_shared<Blob>(device, (void*)data_ptr_, [](void*) {});
+    }
 
     /// Copy constructor performs a "shallow" copy of the Tensor.
     /// This takes a lvalue input, e.g. `Tensor dst(src)`.
@@ -644,7 +678,7 @@ public:
     /// \param dims \p dims can only contain a single dimension or all
     /// dimensions. If \p dims contains a single dimension, the index is along
     /// the specified dimension. If \p dims contains all dimensions, the index
-    /// is into the flattend tensor.
+    /// is into the flattened tensor.
     Tensor ArgMin(const SizeVector& dims) const;
 
     /// Returns maximum index of the tensor along the given \p dim. The returned
@@ -654,7 +688,7 @@ public:
     /// \param dims \p dims can only contain a single dimension or all
     /// dimensions. If \p dims contains a single dimension, the index is along
     /// the specified dimension. If \p dims contains all dimensions, the index
-    /// is into the flattend tensor.
+    /// is into the flattened tensor.
     Tensor ArgMax(const SizeVector& dims) const;
 
     /// Element-wise square root of a tensor, returns a new tensor.
@@ -950,7 +984,7 @@ public:
     /// strides and etc.
     bool IsSame(const Tensor& other) const;
 
-    /// Retrive all values as an std::vector, for debugging and testing
+    /// Retrieve all values as an std::vector, for debugging and testing
     template <typename T>
     std::vector<T> ToFlatVector() const {
         AssertTemplateDtype<T>();
@@ -1228,7 +1262,7 @@ private:
     }
 
 protected:
-    /// SizeVector of the Tensor. shape_[i] is the legnth of dimension i.
+    /// SizeVector of the Tensor. shape_[i] is the length of dimension i.
     SizeVector shape_ = {0};
 
     /// Stride of a Tensor.

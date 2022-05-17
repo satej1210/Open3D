@@ -46,7 +46,7 @@ static std::vector<std::pair<int, int>> InitialMatching(
     std::map<int, int> corres_ij;
     std::vector<int> corres_ji(dst_features.data_.cols(), -1);
 
-#pragma omp parallel for
+#pragma omp for nowait
     for (int j = 0; j < dst_features.data_.cols(); j++) {
         std::vector<int> corres_tmp(1);
         std::vector<double> dist_tmp(1);
@@ -217,6 +217,7 @@ static Eigen::Matrix4d OptimizePairwiseRegistration(
         JTJ.setZero();
         JTr.setZero();
         double r = 0.0, r2 = 0.0;
+        (void)r2;  // r2 is not used for now. Suppress clang warning.
 
         for (size_t c = 0; c < corres.size(); c++) {
             int ii = corres[c].first;

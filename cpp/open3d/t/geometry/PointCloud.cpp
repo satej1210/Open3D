@@ -38,10 +38,12 @@
 #include "open3d/core/TensorCheck.h"
 #include "open3d/core/hashmap/HashSet.h"
 #include "open3d/core/linalg/Matmul.h"
+#include "open3d/core/nns/NearestNeighborSearch.h"
 #include "open3d/t/geometry/TensorMap.h"
 #include "open3d/t/geometry/kernel/GeometryMacros.h"
 #include "open3d/t/geometry/kernel/PointCloud.h"
 #include "open3d/t/geometry/kernel/Transform.h"
+#include "open3d/t/pipelines/registration/Registration.h"
 
 namespace open3d {
 namespace t {
@@ -137,7 +139,7 @@ PointCloud PointCloud::Append(const PointCloud &other) const {
             attr_shape[0] = combined_length;
             if (other_attr_shape != attr_shape) {
                 utility::LogError(
-                        "Shape mismatch. Attribure {}, shape {}, is not "
+                        "Shape mismatch. Attribute {}, shape {}, is not "
                         "compatible with {}.",
                         kv.first, other_attr.GetShape(), kv.second.GetShape());
             }
@@ -212,6 +214,33 @@ PointCloud &PointCloud::Rotate(const core::Tensor &R,
     return *this;
 }
 
+PointCloud PointCloud::SelectPoints(const core::Tensor &boolean_mask,
+                                    bool invert /* = false */) const {
+    const int64_t length = GetPointPositions().GetLength();
+    core::AssertTensorDtype(boolean_mask, core::Dtype::Bool);
+    core::AssertTensorShape(boolean_mask, {length});
+    core::AssertTensorDevice(boolean_mask, GetDevice());
+
+    core::Tensor indices_local;
+    if (invert) {
+        indices_local = boolean_mask.LogicalNot();
+    } else {
+        indices_local = boolean_mask;
+    }
+
+    PointCloud pcd(GetDevice());
+    for (auto &kv : GetPointAttr()) {
+        if (HasPointAttr(kv.first)) {
+            pcd.SetPointAttr(kv.first,
+                             kv.second.IndexGet({indices_local}).Clone());
+        }
+    }
+
+    utility::LogDebug("Pointcloud down sampled from {} points to {} points.",
+                      length, pcd.GetPointPositions().GetLength());
+    return pcd;
+}
+
 PointCloud PointCloud::VoxelDownSample(
         double voxel_size, const core::HashBackendType &backend) const {
     if (voxel_size <= 0) {
@@ -239,6 +268,36 @@ PointCloud PointCloud::VoxelDownSample(
     }
 
     return pcd_down;
+}
+
+std::tuple<PointCloud, core::Tensor> PointCloud::RemoveRadiusOutliers(
+        size_t nb_points, double search_radius) const {
+    if (nb_points < 1 || search_radius <= 0) {
+        utility::LogError(
+                "Illegal input parameters, number of points and radius must be "
+                "positive");
+    }
+    core::nns::NearestNeighborSearch target_nns(GetPointPositions());
+
+    const bool check = target_nns.FixedRadiusIndex(search_radius);
+    if (!check) {
+        utility::LogError("Fixed radius search index is not set.");
+    }
+
+    core::Tensor indices, distance, row_splits;
+    std::tie(indices, distance, row_splits) = target_nns.FixedRadiusSearch(
+            GetPointPositions(), search_radius, false);
+    row_splits = row_splits.To(GetDevice());
+
+    const int64_t size = row_splits.GetLength();
+    const core::Tensor num_neighbors =
+            row_splits.Slice(0, 1, size) - row_splits.Slice(0, 0, size - 1);
+
+    const core::Tensor valid =
+            num_neighbors.Ge(static_cast<int64_t>(nb_points));
+    const PointCloud pcd = SelectPoints(valid);
+
+    return std::make_tuple(pcd, valid);
 }
 
 void PointCloud::EstimateNormals(
@@ -269,7 +328,7 @@ void PointCloud::EstimateNormals(
     if (radius.has_value()) {
         utility::LogDebug("Using Hybrid Search for computing covariances");
         // Computes and sets `covariances` attribute using Hybrid Search
-        // mehtod.
+        // method.
         if (device_type == core::Device::DeviceType::CPU) {
             kernel::pointcloud::EstimateCovariancesUsingHybridSearchCPU(
                     this->GetPointPositions().Contiguous(),
@@ -567,10 +626,16 @@ geometry::RGBDImage PointCloud::ProjectToRGBDImage(
     core::Tensor depth =
             core::Tensor::Zeros({height, width, 1}, core::Float32, device_);
     core::Tensor color =
-            core::Tensor::Zeros({height, width, 3}, core::UInt8, device_);
-    kernel::pointcloud::Project(depth, color, GetPointPositions(),
-                                GetPointColors(), intrinsics, extrinsics,
-                                depth_scale, depth_max);
+            core::Tensor::Zeros({height, width, 3}, core::Float32, device_);
+
+    // Assume point colors are Float32 for kernel dispatch
+    core::Tensor point_colors = GetPointColors();
+    if (point_colors.GetDtype() == core::Dtype::UInt8) {
+        point_colors = point_colors.To(core::Dtype::Float32) / 255.0;
+    }
+
+    kernel::pointcloud::Project(depth, color, GetPointPositions(), point_colors,
+                                intrinsics, extrinsics, depth_scale, depth_max);
 
     return geometry::RGBDImage(color, depth);
 }

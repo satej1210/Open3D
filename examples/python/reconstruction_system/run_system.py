@@ -30,13 +30,18 @@ import json
 import argparse
 import time
 import datetime
-import sys
+import os, sys
 from os.path import isfile
-from initialize_config import initialize_config
+
 import open3d as o3d
-sys.path.append("../utility")
-from file import check_folder_structure
-sys.path.append(".")
+
+pyexample_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(pyexample_path)
+
+from open3d_example import check_folder_structure
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from initialize_config import initialize_config
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reconstruction system")
@@ -61,7 +66,7 @@ if __name__ == "__main__":
         action="store_true")
     parser.add_argument(
         "--slac_integrate",
-        help="Step 6) (optional) integrate fragements using slac to make final "
+        help="Step 6) (optional) integrate fragments using slac to make final "
         "pointcloud / mesh.",
         action="store_true")
     parser.add_argument("--debug_mode",

@@ -76,23 +76,23 @@ The attributes of the triangle mesh have different levels::
     # "normals", some internal operations that expects "normals" will not work.
     # "normals" and "colors" must have shape (N, 3) and must be on the same
     # device as the triangle mesh.
-    mesh.vertex["normals"] = o3c.core.Tensor([[0, 0, 1],
+    mesh.vertex["normals"] = o3d.core.Tensor([[0, 0, 1],
                                               [0, 1, 0],
                                               [1, 0, 0],
                                               [1, 1, 1]], dtype_f, device)
-    mesh.vertex["colors"] = o3c.core.Tensor([[0.0, 0.0, 0.0],
+    mesh.vertex["colors"] = o3d.core.Tensor([[0.0, 0.0, 0.0],
                                              [0.1, 0.1, 0.1],
                                              [0.2, 0.2, 0.2],
                                              [0.3, 0.3, 0.3]], dtype_f, device)
-    mesh.triangle["normals"] = o3c.core.Tensor(...)
-    mesh.triangle["colors"] = o3c.core.Tensor(...)
+    mesh.triangle["normals"] = o3d.core.Tensor(...)
+    mesh.triangle["colors"] = o3d.core.Tensor(...)
 
     # User-defined attributes
     # You can also attach custom attributes. The value tensor must be on the
     # same device as the triangle mesh. The are no restrictions on the shape and
     # dtype, e.g.,
-    pcd.vertex["labels"] = o3c.core.Tensor(...)
-    pcd.triangle["features"] = o3c.core.Tensor(...)
+    pcd.vertex["labels"] = o3d.core.Tensor(...)
+    pcd.triangle["features"] = o3d.core.Tensor(...)
 )");
 
     // Constructors.
@@ -163,6 +163,35 @@ The attributes of the triangle mesh have different levels::
             "Create a TriangleMesh from a legacy Open3D TriangleMesh.");
     triangle_mesh.def("to_legacy", &TriangleMesh::ToLegacy,
                       "Convert to a legacy Open3D TriangleMesh.");
+
+    triangle_mesh.def("clip_plane", &TriangleMesh::ClipPlane, "point"_a,
+                      "normal"_a,
+                      R"(
+Returns a new triangle mesh clipped with the plane.
+
+This method clips the triangle mesh with the specified plane. 
+Parts of the mesh on the positive side of the plane will be kept and triangles
+intersected by the plane will be cut.
+
+Args:
+    point (open3d.core.Tensor): A point on the plane.
+
+    normal (open3d.core.Tensor): The normal of the plane. The normal points to
+        the positive side of the plane for which the geometry will be kept.
+
+Returns:
+    New triangle mesh clipped with the plane.
+
+
+This example shows how to create a hemisphere from a sphere::
+
+    import open3d as o3d
+
+    sphere = o3d.t.geometry.TriangleMesh.from_legacy(o3d.geometry.TriangleMesh.create_sphere())
+    hemisphere = sphere.clip_plane(point=[0,0,0], normal=[1,0,0])
+
+    o3d.visualization.draw(hemisphere)
+)");
 }
 
 }  // namespace geometry

@@ -298,7 +298,8 @@ public:
     Eigen::Vector3d GetMaxBound() const override;
     Eigen::Vector3d GetCenter() const override;
     AxisAlignedBoundingBox GetAxisAlignedBoundingBox() const override;
-    OrientedBoundingBox GetOrientedBoundingBox() const override;
+    OrientedBoundingBox GetOrientedBoundingBox(
+            bool robust = false) const override;
     Octree& Transform(const Eigen::Matrix4d& transformation) override;
     Octree& Translate(const Eigen::Vector3d& translation,
                       bool relative = true) override;
@@ -313,7 +314,7 @@ public:
     ///
     /// \param point_cloud Input point cloud.
     /// \param size_expand A small expansion size such that the octree is
-    /// slightly bigger than the original point cloud bounds to accomodate all
+    /// slightly bigger than the original point cloud bounds to accommodate all
     /// points.
     void ConvertFromPointCloud(const geometry::PointCloud& point_cloud,
                                double size_expand = 0.01);

@@ -34,14 +34,12 @@ First, install a TeX distribution such as `MacTeX <http://www.tug.org/mactex/>`_
 
     brew install ghostscript pandoc doxygen
 
-
 2. Install Python dependencies
 ``````````````````````````````
 
 .. code-block:: bash
 
     pip install -r docs/requirements.txt
-
 
 Build
 -----
@@ -59,6 +57,24 @@ Python package with:
     cd docs
 
     # Run `python make_docs.py --help` to usage of the flags.
-    python make_docs.py --clean_notebooks --execute_notebooks=auto --sphinx --doxygen
+    python make_docs.py --help
+
+    # Example: build .rst and C++ docs only, skip notebooks.
+    python make_docs.py --execute_notebooks=never --sphinx --doxygen
+
+    # Example: build .rst and C++ docs only, skip notebooks, with parallel build.
+    python make_docs.py --execute_notebooks=never --sphinx --doxygen --parallel
+
+    # Example: build .rst and c++ docs, execute notebooks when it has not been executed.
+    python make_docs.py --execute_notebooks=auto --sphinx --doxygen
 
 The docs html will be saved in ``docs/_out`` folder.
+
+Preview
+-------
+
+Open ``docs/_out/html/index.html`` in a web browser to preview the docs.
+
+.. code-block:: bash
+
+    google-chrome docs/_out/html/index.html

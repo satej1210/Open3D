@@ -62,7 +62,10 @@ import open3d as o3d
 from open3d.visualization.tensorboard_plugin import plugin_data_pb2
 from open3d.visualization.tensorboard_plugin import metadata
 from open3d.visualization.tensorboard_plugin.util import _log
-from open3d.ml.vis import BoundingBox3D
+try:
+    from open3d.ml.vis import BoundingBox3D
+except ImportError:
+    BoundingBox3D = None
 
 
 class _AsyncDataWriter:
@@ -127,7 +130,7 @@ class _AsyncDataWriter:
                         _log.debug(f"Flushed {tagfilepath}.")
                 except (StopIteration, RuntimeError):
                     # RuntimeError: possible race condition in dict iterator,
-                    # but PEP3106 guarantees no coruption. Try again later.
+                    # but PEP3106 guarantees no corruption. Try again later.
                     pass
                 self._next_flush_time += self._flush_secs
 
@@ -329,6 +332,9 @@ def _convert_bboxes(bboxes):
         pair of dicts: geometry property dictionary, dict with labels and
         confidences. Confidence values are cast to float32.
     """
+    if BoundingBox3D is None:
+        raise AttributeError(
+            "Build Open3D with 3DML to enable writing BoundingBox3D")
 
     def append_key_values(dict1, dict2):
         for key, val2 in dict2.items():
@@ -541,7 +547,7 @@ def _write_geometry_data(write_dir, tag, step, data, max_outputs=1):
                 connection=buf_con):
             raise IOError(
                 "[Open3D set_mesh_data] Geometry data serialization for tag "
-                "{tag} step {step} failed!")
+                f"{tag} step {step} failed!")
         # TODO(ssheorey): This returns a copy instead of the original. Benchmark
         # vs numpy
         data_buffer = buf_con.get_buffer()
@@ -721,7 +727,7 @@ def add_3d(name,
         Now use ``tensorboard --logdir demo_logs`` to visualize the 3D data.
 
     Note:
-        Sumary writing works on all platforms, and the visualization can be
+        Summary writing works on all platforms, and the visualization can be
         accessed from a browser on any platform. Running the tensorboard process
         is not supported on macOS as yet.
     """
